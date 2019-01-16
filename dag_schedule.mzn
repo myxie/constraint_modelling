@@ -28,15 +28,7 @@ array[TASKS] of var 0..num_machines: allocation;
 
 var 0..max_time: earliest_finish_time = max([end_time[i] | i in TASKS]);
 
-%solve satisfy;
 solve minimize earliest_finish_time;
-%solve :: int_search(end_time ++ allocation , input_order, indomain, complete) minimize earliest_finish_time;% http://www.hakank.org/minizinc/#scheduling_with_assignments. 
-% This ensures that job1 must start before job2
-
-%function calc_final_cost() =
-%	if(allocation[t1]==allocation[t2])(
-%		final_cost=)
-%;
 predicate prec(int:task1 , int: task2, array[int] of var int: start) =
    start[task1] + final_cost[task1] <= start[task2]
    % start[task2] >= start[task1]+final_cost[task1]
@@ -53,39 +45,6 @@ constraint
     )
 ;
 
-% If task 1 and task 2 are allocation 
-%constraint
-%	forall(t1 in TASKS,t2 in TASKS where allocation[t1]==allocation[t2]  /\ comm_cost[t1,t2]>0)(
-%		final_cost[t1]=comp_cost[t1,allocation[t1]]
-%	)
-%;
-
-%constraint
-%	forall(t1 in TASKS,t2 in TASKS where allocation[t1]!=allocation[t2] /\ comm_cost[t1,t2]>0)(
-%		final_cost[t1]>=comp_cost[t1,allocation[t1]] + comm_cost[t1,t2]
-%	)
-%;s
-
-% constraint forall(pred in TASKS)(
-%    (sum(comm_cost[..,pred]
-%    final_cost[pred] = min(comp_cost[pred,..])
-%    endif
-%   )
-% ;
-
-% constraint
-% 	forall(t1 in TASKS)(
-% 		exists (forall(t2 in TASKS)(comm_cost[t2,t1] == 0) 
-% 			comm_penalty[t1] = 0)
-% 	) 
-% ;
-%
-%constraint forall (successor in TASKS)
-%	if exists( precursor in TASKS where == 0 then % This task has no predecessors 
-%		final_cost[t1] = min(comp_cost[t1])
-%	endif
-%	;
-
 array [TASKS] of var int: comm_penalty = [if exists (s in TASKS) (comm_cost[t, s] > 0 /\ sum(comm_cost[..,t])>0) then
   max (s in TASKS where comm_cost[t, s] > 0) (comm_cost[t, s] * (allocation[s] != allocation[t]))
   else
@@ -100,22 +59,6 @@ constraint
 			final_cost[num_tasks]=comp_cost[num_tasks,m]
 	)
 ;
-
-% assign the final task such that the cost is minimized
-%constraint
-
-%constraint 
-%	forall(t1 in TASKS_NOFINAL where comm_cost[t1,final_task]>0)(
-%%		exists(m in MACHINES)(
-%%		allocation[final_task] = m
-%%		/\
-%		prec(t1,final_task,start_time)
-%		/\
-%    	no_overlap (start_time[t1],final_cost[t1],
-%			start_time[final_task],final_cost[final_task])
-%%    	)
-%     )
-%;
 
 constraint
 		forall(t1 in TASKS, t2 in TASKS where comm_cost[t1,t2]>0)(
