@@ -11,9 +11,7 @@ int: num_machines;
 int: max_time;
 int: final_task=num_tasks;
 
-set of int: TASKS=1..num_tasks;
-set of int: TASKS_NOFINAL=1..num_tasks-1; % Final task logic is different
-set of int: TASKS_FINAL = TASKS diff TASKS_NOFINAL;
+set of int: TASKS=1..num_tasks;%
 set of int: MACHINES=1..num_machines;
 
 
@@ -26,8 +24,11 @@ array[TASKS] of var 0..max_time: end_time = [start_time[task]
 												+ final_cost[task] | task in TASKS];
 array[TASKS] of var 0..num_machines: allocation;
 
+
+% TODO look into whether there has to be a boundary on how large a variable can be. 
 var 0..max_time: earliest_finish_time = max([end_time[i] | i in TASKS]);
 
+%annotation maybe_partial;
 solve minimize earliest_finish_time;
 predicate prec(int:task1 , int: task2, array[int] of var int: start) =
    start[task1] + final_cost[task1] <= start[task2]
@@ -38,6 +39,19 @@ predicate no_overlap(var int:s1, var int:d1, var int:s2, var int:d2) =
     s1 + d1 <= s2 \/ s2 + d2 <= s1 
 ;
 
+
+predicate has_predecessors(int:task) = 
+	sum(comm_cost[..,task])>0
+;
+
+
+predicate has_sucessors(int: task) = 
+	 sum(comm_cost[task,..]) > 0
+;
+
+predicate edge_exists(int:task1, int:task2) = 
+	comm_cost[task1,task2] >0
+;	
 % Ensure that there is no overlap between tasks on the same 'machine'
 constraint
 		forall(t1 in TASKS, t2 in TASKS where t1!=t2 /\ allocation[t1]==allocation[t2]) (
@@ -45,18 +59,25 @@ constraint
     )
 ;
 
-array [TASKS] of var int: comm_penalty = [if exists (s in TASKS) (comm_cost[t, s] > 0 /\ sum(comm_cost[..,t])>0) then
-  max (s in TASKS where comm_cost[t, s] > 0) (comm_cost[t, s] * (allocation[s] != allocation[t]))
-  else
-    0
+% TODO - USE A SOURCE AND SINK NODE
+
+% I think I can use the same approach to determining if I have a task with no predecessors (e.g. 1st task - sum of all tasks in the first column is zero) as how I detect if tasks has no successors (and thus is (one-of) the final task(s)) 
+
+array [TASKS] of var int: comm_penalty = [
+	if exists (s in TASKS) (comm_cost[t,s]>0 /\ sum(comm_cost[..,t])>0) then
+		max (s in TASKS where comm_cost[t, s] > 0)
+					(comm_cost[t, s] * (allocation[s] != allocation[t]))
+	else
+		0
   endif | t in TASKS];
 
 constraint forall (t in TASKS) (final_cost[t] = comp_cost[t, allocation[t]] + comm_penalty[t]);
 
 constraint
-	exists(m in MACHINES where allocation[num_tasks] == m )(
-		% Final task is assigned to allocation
-			final_cost[num_tasks]=comp_cost[num_tasks,m]
+		forall(t in TASKS where not has_sucessors(t)) (
+			exists(m in MACHINES where allocation[t] == m )(
+				final_cost[t]=comp_cost[t,m] 
+		)
 	)
 ;
 
