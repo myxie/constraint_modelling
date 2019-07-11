@@ -1,3 +1,19 @@
+% Copyright (C) 2017 RW Bunney
+
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+
+% You should have received a copy of the GNU General Public License
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 % Implementation of DAG Scheduling problem solver in MiniZinc language
 % Inspiration and code snippets from by Hakan Kjellerstrand, hakank@bonetmail.com 
 % http://www.hakank.org/minizinc/#scheduling_with_assignments. 
@@ -59,8 +75,6 @@ constraint
     )
 ;
 
-% TODO - USE A SOURCE AND SINK NODE
-
 % I think I can use the same approach to determining if I have a task with no predecessors (e.g. 1st task - sum of all tasks in the first column is zero) as how I detect if tasks has no successors (and thus is (one-of) the final task(s)) 
 
 array [TASKS] of var int: comm_penalty = [
@@ -72,14 +86,6 @@ array [TASKS] of var int: comm_penalty = [
   endif | t in TASKS];
 
 constraint forall (t in TASKS) (final_cost[t] = comp_cost[t, allocation[t]] + comm_penalty[t]);
-
-constraint
-		forall(t in TASKS where not has_sucessors(t)) (
-			exists(m in MACHINES where allocation[t] == m )(
-				final_cost[t]=comp_cost[t,m] 
-		)
-	)
-;
 
 constraint
 		forall(t1 in TASKS, t2 in TASKS where comm_cost[t1,t2]>0)(
