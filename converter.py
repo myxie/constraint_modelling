@@ -33,36 +33,41 @@ A ".dzn" file will have the format:
 									(these represent the 'source' and sink nodes')
 
 """
+import os
 
 import networkx as nx
 import json
+import sys
 import numpy as np
 
 
-def convert_json_to_dzn(jfile, dzn):
+def convert_json_to_dzn(jfile, dzn, max_time):
 	nxgraph, machines = convert_json_to_nx(jfile)
+	num_tasks = nx.number_of_nodes(nxgraph)
+	num_machines = len(machines)
+	comp_table = format_compcost(nxgraph, num_machines)
+	comm_table = format_commcost(nxgraph)
 
-	comp_table = format_compcost(nxgraph, machines)
-	print(comp_table)
-	comm_table= format_commcost(nxgraph)
-	# comm_table = format_commcost(nxgraph)
-	#
-	# with open(dzn, 'w') as outfile:
-	# 	outfile.write(str(comm_table))
-	# 	outfile.write(str(comp_table))
+	with open(dzn, 'w') as dfile:
+		format_dznfile(dfile, num_tasks, num_machines, comm_table, comp_table, max_time)
 
 
-def convert_from_nxobject(nxgraph):
+def format_dznfile(dfile, num_tasks, num_machines, comm_table, comp_table, max_time):
 	"""
-	Conversion from nx.DiGraph to matrix representation.
-	:param nxgraph:
+
+	:param dfile: The name of the .dzn file to be generated
+	:param num_tasks: The number of tasks for the given problem
+	:param num_machines: The number of machines provided for the given problem
+	:param comm_table: The computation cost matrix
+	:param comp_table: The communication cost matrix
+	:param max_time: The maximum length the schedule can be to be considered valid.
 	:return:
 	"""
-	cost_matrix = np.empty(nxgraph.size + 2, nxgraph.size + 2)
-	for node in nxgraph.node:
-		cost_matrix[node, node] = node
-
-	pass
+	dfile.write('num_tasks={0};\n'.format(num_tasks+2))  # +2 for source/sink node
+	dfile.write('num_machines={0};\n'.format(num_machines))
+	dfile.write('comp_cost={0};\n'.format(comp_table))
+	dfile.write('comm_cost={0};\n'.format(comm_table))
+	dfile.write('max_time={0};\n'.format(max_time))
 
 
 def convert_json_to_nx(jfile):
@@ -79,46 +84,47 @@ def convert_json_to_nx(jfile):
 	return graph, machines
 
 
-def format_compcost(graph, machines):
+def format_compcost(graph, num_machines):
 	# nodes = list(graph.nodes)
-	print(graph.nodes)
-	num_machines = len(machines)
-	compstr = '[|{0}'.format('0, '*num_machines)
+	compstr = '[|{0}'.format('0, ' * num_machines)
 	for node in graph:
 		complist = graph.node[node]['comp']
 		# print(complist)
 		tmp = str(complist).strip('[]')
 		compstr = '{0}\n|{1},'.format(compstr, tmp)
 
-	final_comp = '{0}\n{1}0|];'.format(compstr, '0, '*(num_machines-1))
+	final_comp = '{0}\n|{1}0|]'.format(compstr, '0, ' * (num_machines - 1))
 	return final_comp
 
 
 def format_commcost(graph):
-	edges = list(graph.edges)
 	num_nodes = len(graph)
 	edge_matrix = np.zeros((num_nodes + 2, num_nodes + 2), dtype=int)
 	for edge in graph.edges:
 		t1, t2 = edge[0], edge[1]
 		# We use t1+1 to skip the first row in our matrix,
 		# which represent our 'source' node
-		edge_matrix[t1+1][t2] = graph[t1][t2]['data_size']
-	row_matrix = ''
+		edge_matrix[t1 + 1][t2+1] = graph[t1][t2]['data_size']
+	print(edge_matrix)
+	row_matrix = '['
 	for row in edge_matrix:
 		row_string = (
-			str(row).strip('[]').lstrip(' ').replace('  ', ' ').replace(' ', ', '))
-		row_matrix = '{0}\n|{1},'.format(row_matrix, row_string)
+			str(row).strip('[]').lstrip(' ').replace('  ', ',').replace(', ', ',').replace(' ', ','))
+		# print(row_string[1:])
+		row_matrix = '{0}|{1},\n'.format(row_matrix, row_string)
 		# print(row_string)
 
-	row_matrix = '[{0}|\n];'.format(row_matrix[:-1])
-	print(row_matrix)
-	return edges
+	row_matrix = '{0}|]'.format(row_matrix[:-2])
+	return row_matrix
 
 
-print(convert_json_to_dzn("test/heft_nocalc.json", 'tmp.dzn'))
-# def convert_from_dzn(filename):
-# 	matrix = []
-# 	with open(filename, 'w') as dzn:
-# 		for line in dzn:
-# 			matrix.append(line)
-# 	pass
+if __name__ == '__main__':
+	args = sys.argv
+	# argv[1] is the directory we want to search for json files
+	print(args)
+	if os.path.isdir(args[1]):
+		print(args[1])
+		for path in os.listdir(args[1]):
+			if 'json' in path:
+				convert_json_to_dzn('{0}/{1}'.format(args[1], path), 'exp/dzn/{0}.dzn'.format(path[:-5]), 5000)
+
