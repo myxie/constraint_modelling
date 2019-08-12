@@ -1,0 +1,17 @@
+s%%%mzn-stat initTime=0.003849
+%%%mzn-stat solveTime=18.3216
+%%%mzn-stat solutions=14
+%%%mzn-stat variables=363
+%%%mzn-stat propagators=462
+%%%mzn-stat propagations=184373962
+%%%mzn-stat nodes=3123527
+%%%mzn-stat failures=1561728
+%%%mzn-stat restarts=0
+%%%mzn-stat peakDepth=50
+%%%mzn-stat-end
+s
+
+
+If we make the end_time equal to the maximum cost it could be if top sorted then we can reduce
+the search space (I think) -> this would stop us looking at solutions that satisfy the constraints
+but are not optimal (e.g. starting everything at a 2000)

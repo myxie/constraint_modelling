@@ -47,20 +47,21 @@ def convert_json_to_dzn(jfile, dzn, max_time):
 	num_machines = len(machines)
 	comp_table = format_compcost(nxgraph, num_machines)
 	comm_table = format_commcost(nxgraph)
-
+	topsort = format_topsort(nxgraph)
 	with open(dzn, 'w') as dfile:
-		format_dznfile(dfile, num_tasks, num_machines, comm_table, comp_table, max_time)
+		format_dznfile(dfile, num_tasks, num_machines, comm_table, comp_table, max_time, topsort)
 
 
-def format_dznfile(dfile, num_tasks, num_machines, comm_table, comp_table, max_time):
+def format_dznfile(dfile, num_tasks, num_machines, comm_table, comp_table, max_time, topsort):
+
 	"""
-
 	:param dfile: The name of the .dzn file to be generated
 	:param num_tasks: The number of tasks for the given problem
 	:param num_machines: The number of machines provided for the given problem
 	:param comm_table: The computation cost matrix
 	:param comp_table: The communication cost matrix
 	:param max_time: The maximum length the schedule can be to be considered valid.
+	:param topsort: A topological sort of the graph
 	:return:
 	"""
 	dfile.write('num_tasks={0};\n'.format(num_tasks+2))  # +2 for source/sink node
@@ -68,6 +69,8 @@ def format_dznfile(dfile, num_tasks, num_machines, comm_table, comp_table, max_t
 	dfile.write('comp_cost={0};\n'.format(comp_table))
 	dfile.write('comm_cost={0};\n'.format(comm_table))
 	dfile.write('max_time={0};\n'.format(max_time))
+
+	# dfile.write('topsort={0};\n'.format(topsort))
 
 
 def convert_json_to_nx(jfile):
@@ -79,9 +82,15 @@ def convert_json_to_nx(jfile):
 	with open(jfile) as graph_data:
 		tmp = json.load(graph_data)
 		graph = nx.readwrite.json_graph.node_link_graph(tmp['graph'])
-		machines = tmp['system']['resource']
+		machines = tmp['system']['resouce']
 
 	return graph, machines
+
+
+def format_topsort(graph):
+	ts = (list(nx.algorithms.dag.topological_sort(graph)))
+	# topsort = '[|{0}|]'.format(str(ts).strip('[]'))
+	return str(ts)
 
 
 def format_compcost(graph, num_machines):
