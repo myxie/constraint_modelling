@@ -82,7 +82,7 @@ def convert_json_to_nx(jfile):
 	with open(jfile) as graph_data:
 		tmp = json.load(graph_data)
 		graph = nx.readwrite.json_graph.node_link_graph(tmp['graph'])
-		machines = tmp['system']['resouce']
+		machines = tmp['system']['resource']
 
 	return graph, machines
 
@@ -114,6 +114,7 @@ def format_commcost(graph):
 		# We use t1+1 to skip the first row in our matrix,
 		# which represent our 'source' node
 		edge_matrix[t1 + 1][t2+1] = graph[t1][t2]['data_size']
+		edge_matrix[t2+1][t1+1] = graph[t1][t2]['data_size']
 	print(edge_matrix)
 	row_matrix = '['
 	for row in edge_matrix:
@@ -135,5 +136,5 @@ if __name__ == '__main__':
 		print(args[1])
 		for path in os.listdir(args[1]):
 			if 'json' in path:
-				convert_json_to_dzn('{0}/{1}'.format(args[1], path), 'exp/dzn/{0}.dzn'.format(path[:-5]), 5000)
+				convert_json_to_dzn('{0}/{1}'.format(args[1], path), 'exp/dzn_new/{0}.dzn'.format(path[:-5]), 5000)
 
