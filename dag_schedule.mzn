@@ -42,7 +42,7 @@ array[TASKS] of var 0..max_time: end_time = [start_time[task]
 												+ final_cost[task] | task in TASKS];
 array[TASKS] of var 1..num_machines: allocation;
 var 0..max_time: earliest_finish_time = max([end_time[i] | i in TASKS]);
-
+array[TASKS] of var 0..max_time: comm_penalty;
 array[MACHINES] of var 0..max_time*10: comp_bounds_array = [sum(t in TASKS)(comp_cost[t,m]) | m in MACHINES];
 
 %annotation maybe_partial;
@@ -66,21 +66,55 @@ constraint
     )
 ;
 
-%array [TASKS] of var max_time: comm_penalty = [
-%	if exists (s in TASKS) (comm_cost[t,s]>0 /\ sum(comm_cost[..,t])>0) then
+predicate edge_exists(int:task1, int:task2) =
+	comm_cost[task1,task2] >0
+;
+constraint
+	forall(t1 in TASKS, t2 in TASKS where t1!=t2 /\ edge_exists(t1,t2) /\ allocation[t1]!=allocation[t2]) (
+	comm_penalty[t1] = comm_cost[t1,t2] 
+	)	
+;
+%array [TASKS] of var int: comm_penalty = [
+%	if edge_exists(t1,t2)
+%	then (comm_cost[t1,t2]) * allocation[t1] != allocation[t2] 
+%else
+%	0
+%endif
+% t1,t2 in TASKS where t1!=t2 /\ t1>t2];
+
+
+%/\ allocation[t1]!=allocation[t2] /\ comm_cost[t1,t2] > 0) (
+%	comm_penalty[t1] = comm_cost[t1,t2]
+%);
+
+	%, s in TASKS where t!=s /\ comm_cost[t,s]>0)(
+
+%		if (allocation[t] != allocation[s]) then
+%			comm_penalty[t] = comm_cost[t,s]
+%		else
+%			0
+%		endif
+%	)
+%;
+
+%array [TASKS] of var int: comm_penalty = [
+%	if sum(comm_cost[t,..])>0 then
 %		max (s in TASKS where comm_cost[t, s] > 0)
 %					(comm_cost[t, s] * (allocation[s] != allocation[t]))
 %	else
 %		0
 %  endif | t in TASKS];
 
-array [TASKS] of var 0..max_time: comm_penalty = [
-	if exists(s in TASKS) (comm_cost[t,s] > 0) then
-	max(s in TASKS) (comm_cost[t,s] * (allocation[t]!=allocation[s]))
-	else
-	0
-	endif
-|t in TASKS];
+
+  %array [TASKS] of var 0..max_time: comm_penalty = [
+%	if exists(s in TASKS) (comm_cost[t,s] > 0) then
+%	max(s in TASKS) (comm_cost[t,s] * (allocation[t]!=allocation[s]))
+%	else
+%	0
+%	endif
+%|t in TASKS];
+%constraint forall(t in TASKS,s in TASKS)(comm_penalty[t] = comm_cost[2,5]);
+
 
 constraint forall (t in TASKS) (final_cost[t] = comp_cost[t, allocation[t]] + comm_penalty[t]);
 
